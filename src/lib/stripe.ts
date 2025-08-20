@@ -9,7 +9,7 @@ if (!stripeSecretKey || stripeSecretKey === 'sk_test_your_stripe_secret_key') {
 
 // Server-side Stripe instance
 export const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-06-30.basil',
 });
 
 // Client-side Stripe instance
