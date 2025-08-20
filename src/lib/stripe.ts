@@ -1,14 +1,28 @@
 import Stripe from 'stripe';
 import { loadStripe } from '@stripe/stripe-js';
 
-// Validate Stripe secret key
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-if (!stripeSecretKey || stripeSecretKey === 'sk_test_your_stripe_secret_key') {
-  throw new Error('STRIPE_SECRET_KEY is not configured. Please add your Stripe secret key to .env.local');
-}
+// Server-side Stripe instance (lazy-loaded to avoid client-side errors)
+let _stripe: Stripe | null = null;
 
-// Server-side Stripe instance
-export const stripe = new Stripe(stripeSecretKey);
+export const getServerStripe = (): Stripe => {
+  // Only run on server-side
+  if (typeof window !== 'undefined') {
+    throw new Error('Server-side Stripe instance cannot be used on the client-side');
+  }
+
+  if (!_stripe) {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey || stripeSecretKey === 'sk_test_your_stripe_secret_key') {
+      throw new Error('STRIPE_SECRET_KEY is not configured. Please add your Stripe secret key to environment variables');
+    }
+    _stripe = new Stripe(stripeSecretKey);
+  }
+  
+  return _stripe;
+};
+
+// Legacy export for backward compatibility
+export const stripe = getServerStripe();
 
 // Client-side Stripe instance
 export const getStripe = () => {
