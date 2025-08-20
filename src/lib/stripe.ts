@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { loadStripe } from '@stripe/stripe-js';
 
 // Server-side Stripe instance
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 // Client-side Stripe instance
 export const getStripe = () => {
