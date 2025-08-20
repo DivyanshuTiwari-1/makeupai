@@ -1,12 +1,25 @@
 import Stripe from 'stripe';
 import { loadStripe } from '@stripe/stripe-js';
 
+// Validate Stripe secret key
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey || stripeSecretKey === 'sk_test_your_stripe_secret_key') {
+  throw new Error('STRIPE_SECRET_KEY is not configured. Please add your Stripe secret key to .env.local');
+}
+
 // Server-side Stripe instance
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+export const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: '2024-12-18.acacia',
+});
 
 // Client-side Stripe instance
 export const getStripe = () => {
-  return loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  if (!publishableKey || publishableKey === 'pk_test_your_stripe_publishable_key') {
+    console.error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not configured. Please add your Stripe publishable key to .env.local');
+    return null;
+  }
+  return loadStripe(publishableKey);
 };
 
 // Subscription plan configuration

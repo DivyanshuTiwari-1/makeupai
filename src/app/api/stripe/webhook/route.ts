@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
 
-  if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.error('STRIPE_WEBHOOK_SECRET is not set');
+  if (!process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET === 'whsec_your_stripe_webhook_secret') {
+    console.error('STRIPE_WEBHOOK_SECRET is not configured. Please add your Stripe webhook secret to .env.local');
     return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
   }
   if (!signature) {
