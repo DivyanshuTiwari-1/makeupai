@@ -8,9 +8,7 @@ if (!stripeSecretKey || stripeSecretKey === 'sk_test_your_stripe_secret_key') {
 }
 
 // Server-side Stripe instance
-export const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-06-30.basil',
-});
+export const stripe = new Stripe(stripeSecretKey);
 
 // Client-side Stripe instance
 export const getStripe = () => {
