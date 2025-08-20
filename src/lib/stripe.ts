@@ -21,9 +21,6 @@ export const getServerStripe = (): Stripe => {
   return _stripe;
 };
 
-// Legacy export for backward compatibility
-export const stripe = getServerStripe();
-
 // Client-side Stripe instance
 export const getStripe = () => {
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;

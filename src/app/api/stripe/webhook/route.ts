@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, STRIPE_WEBHOOK_EVENTS } from '@/lib/stripe';
+import { getServerStripe, STRIPE_WEBHOOK_EVENTS } from '@/lib/stripe';
 import { updateSubscriptionStatus } from '@/lib/credits';
 import type Stripe from 'stripe';
 
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
   let event: Stripe.Event;
 
   try {
+    const stripe = getServerStripe();
     event = stripe.webhooks.constructEvent(
       body,
       signature,
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   try {
+    const stripe = getServerStripe();
     const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
     const userId = (customer?.metadata?.user_id) ?? null;
 
@@ -89,6 +91,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 
 async function handleSubscriptionCancellation(subscription: Stripe.Subscription) {
   try {
+    const stripe = getServerStripe();
     const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
     const userId = (customer?.metadata?.user_id) ?? null;
 
@@ -107,6 +110,7 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
 async function handlePaymentSuccess(invoice: Stripe.Invoice) {
   const customerId = invoice.customer;
   try {
+    const stripe = getServerStripe();
     const customer = await stripe.customers.retrieve(customerId as string) as Stripe.Customer;
     const userId = (customer?.metadata?.user_id) ?? null;
     if (userId) {
@@ -123,6 +127,7 @@ async function handlePaymentSuccess(invoice: Stripe.Invoice) {
 async function handlePaymentFailure(invoice: Stripe.Invoice) {
   const customerId = invoice.customer;
   try {
+    const stripe = getServerStripe();
     const customer = await stripe.customers.retrieve(customerId as string) as Stripe.Customer;
     const userId = (customer?.metadata?.user_id) ?? null;
     if (userId) {

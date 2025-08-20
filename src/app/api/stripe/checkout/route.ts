@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, SUBSCRIPTION_PLANS } from '@/lib/stripe';
+import { getServerStripe, SUBSCRIPTION_PLANS } from '@/lib/stripe';
 import { createSupabaseServerClientDirect } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
@@ -7,12 +7,13 @@ export async function POST(request: NextRequest) {
     // Get user from middleware headers
     const userId = request.headers.get('x-user-id');
     const userEmail = request.headers.get('x-user-email');
-
+    
     if (!userId || !userEmail) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Create or get Stripe customer
+    // Initialize Stripe and Supabase
+    const stripe = getServerStripe();
     const supabase = createSupabaseServerClientDirect();
     
     // Check if user already has a Stripe customer ID
