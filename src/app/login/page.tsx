@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     // Check for configuration errors from URL params
@@ -17,21 +18,18 @@ export default function LoginPage() {
       return;
     }
 
-    try {
-      const supabase = createSupabaseBrowserClient();
-      
-      // Check if user is already logged in
-      const checkUser = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          router.push('/dashboard');
-        }
-      };
-      checkUser();
-    } catch (error) {
-      console.error('Supabase configuration error:', error);
+    if (!supabase) {
+      return;
     }
-  }, [router]);
+    // Check if user is already logged in
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        router.push('/dashboard');
+      }
+    };
+    checkUser();
+  }, [router, supabase]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
@@ -41,8 +39,9 @@ export default function LoginPage() {
           <p className="text-gray-600">Sign in to your account</p>
         </div>
         
+        {supabase ? (
         <Auth
-          supabaseClient={createSupabaseBrowserClient()}
+          supabaseClient={supabase}
           appearance={{
             theme: ThemeSupa,
             variables: {
@@ -59,6 +58,11 @@ export default function LoginPage() {
           showLinks={true}
           view="sign_in"
         />
+        ) : (
+          <div className="text-center text-red-600">
+            Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.
+          </div>
+        )}
       </div>
     </main>
   );

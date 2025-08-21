@@ -12,13 +12,17 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       setLoading(false);
     };
     checkUser();
-  }, [supabase.auth]);
+  }, [supabase]);
 
   if (loading) {
     return (
