@@ -132,7 +132,14 @@ export async function middleware(request: NextRequest) {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
       
+      console.log(`[Middleware] Route: ${pathname}, User: ${user?.id || 'none'}, Error: ${error?.message || 'none'}`);
+      
       if (error || !user) {
+        console.log(`[Middleware] Authentication failed for ${pathname}`);
+        // For API routes, return 401
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
         // Redirect to login if not authenticated
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('redirect', pathname);
@@ -141,6 +148,7 @@ export async function middleware(request: NextRequest) {
 
       // Add user info to headers for API routes
       if (pathname.startsWith('/api/')) {
+        console.log(`[Middleware] Setting x-user-id header: ${user.id}`);
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set('x-user-id', user.id);
         requestHeaders.set('x-user-email', user.email || '');
@@ -151,9 +159,16 @@ export async function middleware(request: NextRequest) {
           },
         });
       }
+      
+      // For non-API protected routes, continue with supabaseResponse
+      return supabaseResponse;
 
     } catch (error) {
       console.error('Auth middleware error:', error);
+      // For API routes, return 401
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
       // Redirect to login on auth error
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
