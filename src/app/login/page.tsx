@@ -4,28 +4,25 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { createSupabaseBrowserClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [configError, setConfigError] = useState<string | null>(null);
-  const [supabase, setSupabase] = useState<any>(null);
 
   useEffect(() => {
     // Check for configuration errors from URL params
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('error') === 'database_not_configured') {
-      setConfigError('Database not configured. Please set up your Supabase credentials.');
+      console.error('Database not configured');
       return;
     }
 
     try {
-      const supabaseClient = createSupabaseBrowserClient();
-      setSupabase(supabaseClient);
+      const supabase = createSupabaseBrowserClient();
       
       // Check if user is already logged in
       const checkUser = async () => {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           router.push('/dashboard');
         }
@@ -33,7 +30,6 @@ export default function LoginPage() {
       checkUser();
     } catch (error) {
       console.error('Supabase configuration error:', error);
-      setConfigError('Database configuration error. Please check your environment variables.');
     }
   }, [router]);
 
@@ -46,7 +42,7 @@ export default function LoginPage() {
         </div>
         
         <Auth
-          supabaseClient={supabase}
+          supabaseClient={createSupabaseBrowserClient()}
           appearance={{
             theme: ThemeSupa,
             variables: {

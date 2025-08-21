@@ -70,7 +70,14 @@ function DashboardContent() {
       if (response.ok && data.url) {
         window.location.href = data.url;
       } else {
-        console.error('Failed to create checkout session:', data.error);
+        console.error('Failed to create checkout session:', data);
+        if (response.status === 401) {
+          alert('Authentication failed. Please refresh the page and try again.');
+        } else if (response.status === 503) {
+          alert(data.error || 'Service temporarily unavailable. Please check configuration.');
+        } else {
+          alert(data.error || 'Failed to create checkout session');
+        }
       }
     } catch (error) {
       console.error('Upgrade error:', error);

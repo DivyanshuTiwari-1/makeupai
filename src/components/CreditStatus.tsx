@@ -60,7 +60,14 @@ export default function CreditStatus({ className = '', showUpgradeButton = true 
         // Redirect to Stripe checkout
         window.location.href = data.url;
       } else {
-        setError(data.error || 'Failed to create checkout session');
+        console.error('Checkout error:', data);
+        if (response.status === 401) {
+          setError('Authentication failed. Please refresh the page and try again.');
+        } else if (response.status === 503) {
+          setError(data.error || 'Service temporarily unavailable. Please check configuration.');
+        } else {
+          setError(data.error || 'Failed to create checkout session');
+        }
       }
     } catch (err) {
       setError(`Failed to initiate upgrade process ${err}`);

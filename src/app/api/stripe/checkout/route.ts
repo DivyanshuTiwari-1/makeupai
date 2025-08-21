@@ -9,12 +9,39 @@ export async function POST(request: NextRequest) {
     const userEmail = request.headers.get('x-user-email');
     
     if (!userId || !userEmail) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('Missing user headers - middleware authentication failed');
+      console.error('Headers received:', {
+        'x-user-id': userId,
+        'x-user-email': userEmail,
+        'user-agent': request.headers.get('user-agent'),
+        'authorization': request.headers.get('authorization')
+      });
+      
+      return NextResponse.json({ 
+        error: 'Unauthorized - User authentication failed. Please ensure you are logged in and Supabase is properly configured.' 
+      }, { status: 401 });
     }
 
     // Initialize Stripe and Supabase
-    const stripe = getServerStripe();
-    const supabase = createSupabaseServerClientDirect();
+    let stripe;
+    try {
+      stripe = getServerStripe();
+    } catch (stripeError) {
+      console.error('Stripe configuration error:', stripeError);
+      return NextResponse.json({ 
+        error: 'Payment system not configured. Please set up Stripe credentials.' 
+      }, { status: 503 });
+    }
+    
+    let supabase;
+    try {
+      supabase = createSupabaseServerClientDirect();
+    } catch (supabaseError) {
+      console.error('Supabase configuration error:', supabaseError);
+      return NextResponse.json({ 
+        error: 'Database not configured. Please set up Supabase credentials.' 
+      }, { status: 503 });
+    }
     
     // Check if user already has a Stripe customer ID
     const { data: userProfile } = await supabase
