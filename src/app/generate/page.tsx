@@ -1,8 +1,6 @@
   'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createSupabaseBrowserClient } from '@/lib/supabase';
 import ImageUpload from '@/components/ImageUpload';
 import MakeupStyleSelector from '@/components/MakeupStyleSelector';
 import { makeupStyles, MakeupStyle } from '@/lib/replicate';

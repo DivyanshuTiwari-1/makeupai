@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateMakeupImage, makeupStyles } from '@/lib/replicate';
 import { checkUserCredits, deductCredit } from '@/lib/credits';
-import { CookieOptions } from '@supabase/ssr';
 export async function POST(request: NextRequest) {
   try {
     // Get user from middleware headers

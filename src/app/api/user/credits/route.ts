@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkUserCredits } from '@/lib/credits';
-import { CookieOptions } from '@supabase/ssr';
 
 export async function GET(request: NextRequest) {
   try {
