@@ -4,10 +4,57 @@ import { checkUserCredits } from '@/lib/credits';
 export async function GET(request: NextRequest) {
   try {
     // Get user from middleware headers
+<<<<<<< HEAD
     const userId = request.headers.get('x-user-id');
     console.log("user id is ",userId);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized user is found' }, { status: 401 });
+=======
+    let userId = request.headers.get('x-user-id');
+    
+    console.log('[Credits API] Headers received:', {
+      'x-user-id': userId,
+      'x-user-email': request.headers.get('x-user-email'),
+      'all-headers': Object.fromEntries(request.headers.entries())
+    });
+
+    // Fallback: Try to get user directly from Supabase if header is missing
+    if (!userId) {
+      console.log('[Credits API] No x-user-id header found, trying direct Supabase auth...');
+      
+      try {
+        const { createServerClient } = require('@supabase/ssr');
+        const supabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            cookies: {
+              getAll() {
+                return request.cookies.getAll();
+              },
+              setAll() {
+                // No-op for API routes
+              },
+            },
+          }
+        );
+        
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (user && !error) {
+          userId = user.id;
+          console.log('[Credits API] Got user from direct auth:', userId);
+        } else {
+          console.log('[Credits API] Direct auth also failed:', error?.message);
+        }
+      } catch (fallbackError) {
+        console.log('[Credits API] Fallback auth error:', fallbackError);
+      }
+    }
+
+    if (!userId) {
+      console.log('[Credits API] No user ID available, returning 401');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+>>>>>>> c6f51b1234fbaf146994750da3cc02f43ee866e5
     }
 
     // Get cookies for Supabase client
