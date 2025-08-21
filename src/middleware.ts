@@ -11,7 +11,7 @@ const protectedRoutes = [
   '/history',
   '/api/generate',
   '/api/save',
-  '/api/user/credits',
+  '/api/user',
   '/api/stripe/checkout'
 ];
 
