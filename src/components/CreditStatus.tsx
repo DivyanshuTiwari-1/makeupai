@@ -1,5 +1,6 @@
 'use client';
 
+import axios from 'axios';
 import { useState, useEffect } from 'react';
 
 interface CreditStatusProps {
@@ -47,16 +48,11 @@ export default function CreditStatus({ className = '', showUpgradeButton = true 
       setUpgrading(true);
       setError(null);
 
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await axios.get('/api/user/credits');
+      const {data} = await response.data;
+        setCreditData(data);
 
-      const data = await response.json();
-
-      if (response.ok && data.url) {
+      if (response.status && data.url) {
         // Redirect to Stripe checkout
         window.location.href = data.url;
       } else {

@@ -5,9 +5,9 @@ export async function GET(request: NextRequest) {
   try {
     // Get user from middleware headers
     const userId = request.headers.get('x-user-id');
-
+    console.log("user id is ",userId);
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized user is found' }, { status: 401 });
     }
 
     // Get cookies for Supabase client
