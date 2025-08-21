@@ -1,27 +1,49 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { createSupabaseBrowserClient } from '@/lib/supabase';
 
 export default function DebugAuth() {
-  const [authState, setAuthState] = useState<any>(null);
-  const [creditsTest, setCreditsTest] = useState<any>(null);
+  type AuthState = {
+    user: { id: string; email: string | null } | null;
+    error: string | null;
+    hasSession: boolean;
+    supabaseUrl?: string | undefined;
+    hasSupabaseKey?: boolean;
+  } | null;
+
+  type CreditsTest = {
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    body: string;
+  } | null;
+
+  const [authState, setAuthState] = useState<AuthState>(null);
+  const [creditsTest, setCreditsTest] = useState<CreditsTest>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function checkAuth() {
       try {
-        // Create Supabase client
-        const supabase = createBrowserClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        // Create Supabase client (safe in browser only)
+        const supabase = createSupabaseBrowserClient();
+        if (!supabase) {
+          setAuthState({
+            user: null,
+            error: 'Supabase not configured',
+            hasSession: false,
+            supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+            hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          });
+          return;
+        }
 
         // Check current user
         const { data: { user }, error } = await supabase.auth.getUser();
         
         setAuthState({
-          user: user ? { id: user.id, email: user.email } : null,
+          user: user ? { id: user.id, email: user.email ?? null } : null,
           error: error?.message || null,
           hasSession: !!user,
           supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -42,7 +64,14 @@ export default function DebugAuth() {
 
       } catch (err) {
         console.error('Debug error:', err);
-        setAuthState({ error: err.message });
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setAuthState({
+          user: null,
+          error: message,
+          hasSession: false,
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        });
       } finally {
         setLoading(false);
       }

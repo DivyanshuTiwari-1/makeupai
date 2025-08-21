@@ -38,6 +38,10 @@ function DashboardContent() {
   const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -48,7 +52,7 @@ function DashboardContent() {
       setLoading(false);
     };
     checkUser();
-  }, [supabase.auth, router]);
+  }, [supabase, router]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

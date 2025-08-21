@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       console.log('[Credits API] No x-user-id header found, trying direct Supabase auth...');
       
       try {
-        const { createServerClient } = require('@supabase/ssr');
+        const { createServerClient } = await import('@supabase/ssr');
         const supabase = createServerClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
