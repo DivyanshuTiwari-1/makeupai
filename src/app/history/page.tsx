@@ -26,6 +26,13 @@ export default function HistoryPage() {
   useEffect(() => {
     const checkUserAndLoadHistory = async () => {
       try {
+        // Check if Supabase is properly configured
+        if (!supabase) {
+          setError('Database configuration missing. Please check your environment variables.');
+          setLoading(false);
+          return;
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
 
@@ -39,14 +46,18 @@ export default function HistoryPage() {
 
           if (error) {
             console.error('Error fetching history:', error);
-            setError('Failed to load your history');
+            setError('Failed to load your history. Please check your database configuration.');
           } else {
             setLooks(data || []);
           }
         }
       } catch (err) {
         console.error('Error:', err);
-        setError('Something went wrong');
+        if (err instanceof Error && err.message.includes('SUPABASE')) {
+          setError('Database configuration error. Please set up your Supabase credentials.');
+        } else {
+          setError('Something went wrong');
+        }
       } finally {
         setLoading(false);
       }

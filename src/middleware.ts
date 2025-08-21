@@ -30,6 +30,20 @@ const API_RATE_LIMIT_MAX_REQUESTS = 10; // 10 requests per minute for API routes
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
+  // Check if route is protected or public first
+  const isProtectedRoute = protectedRoutes.some(route => 
+    pathname.startsWith(route)
+  );
+  
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(route)
+  );
+
+  // Skip auth check for public routes
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
   // Create Supabase client for server-side auth
   let supabaseResponse = NextResponse.next({
     request: {
@@ -37,9 +51,43 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // Validate Supabase configuration
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey || 
+      supabaseUrl === 'https://placeholder.supabase.co' || 
+      supabaseUrl === 'your_supabase_project_url' ||
+      supabaseKey === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' ||
+      supabaseKey === 'your_supabase_anon_key') {
+    
+    // For protected routes, return proper error
+    if (isProtectedRoute) {
+      if (pathname.startsWith('/api/')) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: 'Database not configured. Please set up your Supabase credentials in environment variables.' 
+          }),
+          { 
+            status: 503, 
+            headers: { 'Content-Type': 'application/json' } 
+          }
+        );
+      } else {
+        // For page routes, redirect to login with error
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('error', 'database_not_configured');
+        return NextResponse.redirect(loginUrl);
+      }
+    }
+    
+    // For other routes, continue without Supabase
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
@@ -77,19 +125,7 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // Check if route is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-  
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname === route || pathname.startsWith(route)
-  );
 
-  // Skip auth check for public routes
-  if (isPublicRoute) {
-    return supabaseResponse;
-  }
 
   // For protected routes, check authentication
   if (isProtectedRoute) {
