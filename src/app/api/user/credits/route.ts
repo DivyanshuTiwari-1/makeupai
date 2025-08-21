@@ -5,8 +5,15 @@ export async function GET(request: NextRequest) {
   try {
     // Get user from middleware headers
     const userId = request.headers.get('x-user-id');
+    
+    console.log('[Credits API] Headers received:', {
+      'x-user-id': userId,
+      'x-user-email': request.headers.get('x-user-email'),
+      'all-headers': Object.fromEntries(request.headers.entries())
+    });
 
     if (!userId) {
+      console.log('[Credits API] No x-user-id header found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
