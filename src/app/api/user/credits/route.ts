@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     // Get user from middleware headers
     const userId = request.headers.get('x-user-id');
-    
+  
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized user is found' }, { status: 401 });
     }
