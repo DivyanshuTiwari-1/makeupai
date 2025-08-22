@@ -131,7 +131,8 @@ async function handlePaymentSuccess(invoice: Stripe.Invoice) {
     
     if (userId) {
       // Check if this is a subscription payment by looking at the subscription property
-      const subscriptionId = (invoice as Stripe.Invoice & { subscription?: string }).subscription;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const subscriptionId = 'subscription' in invoice ? (invoice as any).subscription : null;
       if (subscriptionId && typeof subscriptionId === 'string') {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         const isActive = subscription.status === 'active' || subscription.status === 'trialing';
