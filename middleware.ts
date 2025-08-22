@@ -23,18 +23,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // TEMPORARY: Allow all routes for debugging
-  // Remove this section once authentication is working
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🚧 DEBUG MODE: Allowing all routes');
-    const response = NextResponse.next();
-    // Add mock headers for testing API routes
-    if (url.pathname.startsWith('/api/')) {
-      response.headers.set('x-user-id', 'debug-user-id');
-      response.headers.set('x-user-email', 'debug@example.com');
-      console.log('🔗 Added debug headers for API route');
-    }
-    return response;
+  // Check if Supabase is properly configured
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey || 
+      supabaseUrl === 'https://placeholder.supabase.co' || 
+      supabaseUrl === 'your_supabase_project_url' ||
+      supabaseKey === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' ||
+      supabaseKey === 'your_supabase_anon_key') {
+    
+    console.log('❌ Supabase not configured, redirecting to login');
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // Create Supabase client
@@ -59,12 +59,29 @@ export async function middleware(request: NextRequest) {
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     
+    console.log(`[Middleware] Route: ${url.pathname}, User: ${user?.id || 'none'}, Error: ${error?.message || 'none'}`);
+    
     if (error) {
       console.log('❌ Auth error:', error.message);
+      // For API routes, return 401 instead of redirecting
+      if (url.pathname.startsWith('/api/')) {
+        return new NextResponse(
+          JSON.stringify({ error: 'Authentication failed' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      return NextResponse.redirect(new URL('/login', request.url));
     }
 
     if (!user) {
-      console.log('❌ No user found, redirecting to login');
+      console.log('❌ No user found');
+      // For API routes, return 401 instead of redirecting
+      if (url.pathname.startsWith('/api/')) {
+        return new NextResponse(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
@@ -72,7 +89,7 @@ export async function middleware(request: NextRequest) {
     if (url.pathname.startsWith('/api/')) {
       response.headers.set('x-user-id', user.id);
       response.headers.set('x-user-email', user.email || '');
-      console.log('🔗 Added user headers for API route');
+      console.log(`🔗 Added user headers for API route: ${user.id}`);
     }
 
     console.log('✅ User authenticated:', user.email);
@@ -80,6 +97,13 @@ export async function middleware(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Middleware error:', error);
+    // For API routes, return 401 instead of redirecting
+    if (url.pathname.startsWith('/api/')) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Internal server error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     return NextResponse.redirect(new URL('/login', request.url));
   }
 }

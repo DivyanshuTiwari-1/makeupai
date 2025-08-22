@@ -6,10 +6,29 @@ import { createSupabaseServerClientDirect } from '@/lib/supabase';
 export async function GET(request: NextRequest) {
   try {
     // Get user from middleware headers
-    const userId = request.headers.get('x-user-id');
+    let userId = request.headers.get('x-user-id');
     
+    // Fallback: If middleware didn't set headers, try to get user from cookies directly
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('[Subscription API] No x-user-id header found, trying fallback authentication');
+      
+      try {
+        const { createSupabaseServerClientDirect } = await import('@/lib/supabase');
+        const supabase = createSupabaseServerClientDirect();
+        
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error || !user) {
+          console.log('[Subscription API] Fallback auth failed:', error?.message || 'No user found');
+          return NextResponse.json({ error: 'Unauthorized - Please log in again' }, { status: 401 });
+        }
+        
+        userId = user.id;
+        console.log('[Subscription API] Fallback auth successful for user:', userId);
+      } catch (fallbackError) {
+        console.error('[Subscription API] Fallback auth error:', fallbackError);
+        return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
+      }
     }
 
     const supabase = createSupabaseServerClientDirect();

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkUserCredits } from '@/lib/credits';
+import { getAuthenticatedUser } from '@/lib/auth-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from middleware headers
-    const userId = request.headers.get('x-user-id');
-  
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized user is found' }, { status: 401 });
+    // Get authenticated user (with fallback)
+    let userId: string;
+    try {
+      const authResult = await getAuthenticatedUser(request);
+      userId = authResult.userId;
+    } catch (authError) {
+      console.error('[Credits API] Authentication failed:', authError);
+      return NextResponse.json({ error: 'Unauthorized - Please log in again' }, { status: 401 });
     }
 
     // Get cookies for Supabase client

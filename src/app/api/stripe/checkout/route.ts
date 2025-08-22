@@ -5,21 +5,35 @@ import { createSupabaseServerClientDirect } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     // Get user from middleware headers
-    const userId = request.headers.get('x-user-id');
-    const userEmail = request.headers.get('x-user-email');
+    let userId = request.headers.get('x-user-id');
+    let userEmail = request.headers.get('x-user-email');
     
+    // Fallback: If middleware didn't set headers, try to get user from cookies directly
     if (!userId || !userEmail) {
-      console.error('Missing user headers - middleware authentication failed');
-      console.error('Headers received:', {
-        'x-user-id': userId,
-        'x-user-email': userEmail,
-        'user-agent': request.headers.get('user-agent'),
-        'authorization': request.headers.get('authorization')
-      });
+      console.log('[Checkout API] Missing user headers, trying fallback authentication');
       
-      return NextResponse.json({ 
-        error: 'Unauthorized - User authentication failed. Please ensure you are logged in and Supabase is properly configured.' 
-      }, { status: 401 });
+      try {
+        const { createSupabaseServerClientDirect } = await import('@/lib/supabase');
+        const supabase = createSupabaseServerClientDirect();
+        
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error || !user) {
+          console.log('[Checkout API] Fallback auth failed:', error?.message || 'No user found');
+          return NextResponse.json({ 
+            error: 'Unauthorized - Please log in again' 
+          }, { status: 401 });
+        }
+        
+        userId = user.id;
+        userEmail = user.email || '';
+        console.log('[Checkout API] Fallback auth successful for user:', userId);
+      } catch (fallbackError) {
+        console.error('[Checkout API] Fallback auth error:', fallbackError);
+        return NextResponse.json({ 
+          error: 'Authentication failed - Please log in again' 
+        }, { status: 401 });
+      }
     }
 
     // Initialize Stripe and Supabase
