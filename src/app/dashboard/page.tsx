@@ -12,7 +12,13 @@ interface User {
   email: string;
 }
 
-function SearchParamsNotification() {
+function SearchParamsNotification({ 
+  onSuccess, 
+  onCancel 
+}: { 
+  onSuccess: () => void; 
+  onCancel: () => void; 
+}) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -20,36 +26,13 @@ function SearchParamsNotification() {
     if (searchParams?.get('success') === 'true') {
       // You can add a toast notification here
       console.log('Payment successful!');
-      setShowSuccessMessage(true);
-      // Refresh subscription status after successful payment
-      const refreshSubscriptionStatus = async () => {
-        try {
-          // Try multiple times with delay to ensure webhook has processed
-          for (let i = 0; i < 3; i++) {
-            const response = await fetch('/api/user/credits');
-            const data = await response.json();
-            if (response.ok) {
-              setIsSubscribed(data.isSubscribed);
-              if (data.isSubscribed) {
-                console.log('Subscription status updated successfully');
-                break;
-              }
-            }
-            // Wait before next attempt
-            if (i < 2) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-          }
-        } catch (error) {
-          console.error('Failed to refresh subscription status:', error);
-        }
-      };
-      refreshSubscriptionStatus();
+      onSuccess();
     }
     if (searchParams?.get('canceled') === 'true') {
       console.log('Payment canceled');
+      onCancel();
     }
-  }, [searchParams]);
+  }, [searchParams, onSuccess, onCancel]);
 
   return null;
 }
@@ -133,9 +116,39 @@ function DashboardContent() {
     );
   }
 
+  const handlePaymentSuccess = async () => {
+    setShowSuccessMessage(true);
+    // Refresh subscription status after successful payment
+    try {
+      // Try multiple times with delay to ensure webhook has processed
+      for (let i = 0; i < 3; i++) {
+        const response = await fetch('/api/user/credits');
+        const data = await response.json();
+        if (response.ok) {
+          setIsSubscribed(data.isSubscribed);
+          if (data.isSubscribed) {
+            console.log('Subscription status updated successfully');
+            break;
+          }
+        }
+        // Wait before next attempt
+        if (i < 2) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh subscription status:', error);
+    }
+  };
+
+  const handlePaymentCancel = () => {
+    // Handle payment cancellation if needed
+    console.log('Payment was cancelled');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
-      <SearchParamsNotification />
+      <SearchParamsNotification onSuccess={handlePaymentSuccess} onCancel={handlePaymentCancel} />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">

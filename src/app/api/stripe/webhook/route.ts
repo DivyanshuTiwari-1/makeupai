@@ -130,9 +130,10 @@ async function handlePaymentSuccess(invoice: Stripe.Invoice) {
     const userId = (customer?.metadata?.user_id) ?? null;
     
     if (userId) {
-      // Check if this is a subscription payment
-      if (invoice.subscription) {
-        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+      // Check if this is a subscription payment by looking at the subscription property
+      const subscriptionId = (invoice as Stripe.Invoice & { subscription?: string }).subscription;
+      if (subscriptionId && typeof subscriptionId === 'string') {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         const isActive = subscription.status === 'active' || subscription.status === 'trialing';
         
         // Update subscription status in database
