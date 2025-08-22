@@ -33,19 +33,27 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       case STRIPE_WEBHOOK_EVENTS.CUSTOMER_SUBSCRIPTION_CREATED:
+        console.log('Subscription created event received');
+        await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
+        break;
+
       case STRIPE_WEBHOOK_EVENTS.CUSTOMER_SUBSCRIPTION_UPDATED:
+        console.log('Subscription updated event received');
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
         break;
 
       case STRIPE_WEBHOOK_EVENTS.CUSTOMER_SUBSCRIPTION_DELETED:
+        console.log('Subscription deleted event received');
         await handleSubscriptionCancellation(event.data.object as Stripe.Subscription);
         break;
 
       case STRIPE_WEBHOOK_EVENTS.INVOICE_PAYMENT_SUCCEEDED:
+        console.log('Payment succeeded event received');
         await handlePaymentSuccess(event.data.object as Stripe.Invoice);
         break;
 
       case STRIPE_WEBHOOK_EVENTS.INVOICE_PAYMENT_FAILED:
+        console.log('Payment failed event received');
         await handlePaymentFailure(event.data.object as Stripe.Invoice);
         break;
 
@@ -65,25 +73,32 @@ export async function POST(request: NextRequest) {
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   try {
+    console.log(`Processing subscription update for subscription ${subscription.id}, status: ${subscription.status}`);
+    
     const stripe = getServerStripe();
     const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
     const userId = (customer?.metadata?.user_id) ?? null;
 
     if (!userId) {
-      console.error('No user_id found in customer metadata');
+      console.error('No user_id found in customer metadata for subscription', subscription.id);
       return;
     }
 
     const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+    console.log(`Setting subscription status to ${isActive} for user ${userId}`);
 
-    await updateSubscriptionStatus(
+    const success = await updateSubscriptionStatus(
       userId,
       isActive,
       { getAll: () => [], setAll: () => {} },
       subscription.id
     );
 
-    console.log(`Subscription ${subscription.status} for user ${userId}`);
+    if (success) {
+      console.log(`Successfully updated subscription status to ${isActive} for user ${userId}, subscription ${subscription.id}`);
+    } else {
+      console.error(`Failed to update subscription status for user ${userId}, subscription ${subscription.id}`);
+    }
   } catch (error) {
     console.error('Error in handleSubscriptionUpdate:', error);
   }
@@ -113,9 +128,26 @@ async function handlePaymentSuccess(invoice: Stripe.Invoice) {
     const stripe = getServerStripe();
     const customer = await stripe.customers.retrieve(customerId as string) as Stripe.Customer;
     const userId = (customer?.metadata?.user_id) ?? null;
+    
     if (userId) {
-      // Optionally, grant bonus credits or log analytics here
-      console.log(`Payment succeeded for user ${userId}, invoice ${invoice.id}`);
+      // Check if this is a subscription payment
+      if (invoice.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+        
+        // Update subscription status in database
+        await updateSubscriptionStatus(
+          userId,
+          isActive,
+          { getAll: () => [], setAll: () => {} },
+          subscription.id
+        );
+        
+        console.log(`Payment succeeded for user ${userId}, subscription ${subscription.id} is ${subscription.status}`);
+      } else {
+        // One-time payment - log for analytics
+        console.log(`One-time payment succeeded for user ${userId}, invoice ${invoice.id}`);
+      }
     } else {
       console.log(`Payment succeeded for unknown user, invoice ${invoice.id}`);
     }

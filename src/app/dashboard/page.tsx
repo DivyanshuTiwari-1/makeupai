@@ -24,10 +24,21 @@ function SearchParamsNotification() {
       // Refresh subscription status after successful payment
       const refreshSubscriptionStatus = async () => {
         try {
-          const response = await fetch('/api/user/credits');
-          const data = await response.json();
-          if (response.ok) {
-            setIsSubscribed(data.isSubscribed);
+          // Try multiple times with delay to ensure webhook has processed
+          for (let i = 0; i < 3; i++) {
+            const response = await fetch('/api/user/credits');
+            const data = await response.json();
+            if (response.ok) {
+              setIsSubscribed(data.isSubscribed);
+              if (data.isSubscribed) {
+                console.log('Subscription status updated successfully');
+                break;
+              }
+            }
+            // Wait before next attempt
+            if (i < 2) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
           }
         } catch (error) {
           console.error('Failed to refresh subscription status:', error);
@@ -171,6 +182,27 @@ function DashboardContent() {
           <h2 className="text-xl font-semibold mb-4">Welcome back!</h2>
           <p className="text-gray-600 mb-2">Email: {user?.email}</p>
           <CreditStatus />
+          
+          {/* Debug: Sync subscription status */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/user/subscription');
+                  const data = await response.json();
+                  if (response.ok) {
+                    setIsSubscribed(data.isSubscribed);
+                    console.log('Subscription sync result:', data);
+                  }
+                } catch (error) {
+                  console.error('Failed to sync subscription:', error);
+                }
+              }}
+              className="text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Sync subscription status
+            </button>
+          </div>
         </div>
 
         {/* Quick Actions */}
