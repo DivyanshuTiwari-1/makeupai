@@ -1,6 +1,5 @@
 'use client';
 
-import axios from 'axios';
 import { useState, useEffect } from 'react';
 
 interface CreditStatusProps {
@@ -23,6 +22,15 @@ export default function CreditStatus({ className = '', showUpgradeButton = true 
 
   useEffect(() => {
     fetchCredits();
+  }, []);
+
+  // Refresh credits when component mounts or when subscription status might have changed
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchCredits();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchCredits = async () => {
@@ -48,11 +56,16 @@ export default function CreditStatus({ className = '', showUpgradeButton = true 
       setUpgrading(true);
       setError(null);
 
-      const response = await axios.get('/api/user/credits');
-      const {data} = await response.data;
-        setCreditData(data);
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (response.status && data.url) {
+      const data = await response.json();
+
+      if (response.ok && data.url) {
         // Redirect to Stripe checkout
         window.location.href = data.url;
       } else {

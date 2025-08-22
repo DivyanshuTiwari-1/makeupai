@@ -20,6 +20,20 @@ function SearchParamsNotification() {
     if (searchParams?.get('success') === 'true') {
       // You can add a toast notification here
       console.log('Payment successful!');
+      setShowSuccessMessage(true);
+      // Refresh subscription status after successful payment
+      const refreshSubscriptionStatus = async () => {
+        try {
+          const response = await fetch('/api/user/credits');
+          const data = await response.json();
+          if (response.ok) {
+            setIsSubscribed(data.isSubscribed);
+          }
+        } catch (error) {
+          console.error('Failed to refresh subscription status:', error);
+        }
+      };
+      refreshSubscriptionStatus();
     }
     if (searchParams?.get('canceled') === 'true') {
       console.log('Payment canceled');
@@ -34,6 +48,8 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
 
@@ -45,6 +61,18 @@ function DashboardContent() {
         return;
       }
       setUser(user as User);
+      
+      // Check subscription status
+      try {
+        const response = await fetch('/api/user/credits');
+        const data = await response.json();
+        if (response.ok) {
+          setIsSubscribed(data.isSubscribed);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subscription status:', error);
+      }
+      
       setLoading(false);
     };
     checkUser();
@@ -109,6 +137,35 @@ function DashboardContent() {
           </button>
         </div>
 
+        {/* Success Message */}
+        {showSuccessMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-green-800">
+                  Payment successful! You are now a premium user with unlimited credits.
+                </p>
+              </div>
+              <div className="ml-auto pl-3">
+                <button
+                  onClick={() => setShowSuccessMessage(false)}
+                  className="text-green-400 hover:text-green-600"
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* User Info */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">Welcome back!</h2>
@@ -145,17 +202,32 @@ function DashboardContent() {
           </Link>
         </div>
 
-        {/* Upgrade Section */}
-        <div className="bg-gradient-to-r from-pink-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-          <h3 className="text-xl font-semibold mb-2">Upgrade to Premium</h3>
-          <p className="mb-4">Get unlimited makeup generations and access to all features!</p>
-          <button 
-            onClick={() => setShowUpgradeModal(true)}
-            className="bg-white text-pink-600 px-6 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors"
-          >
-            Upgrade Now - 20$ per month
-          </button>
-        </div>
+        {/* Upgrade Section - Only show for non-premium users */}
+        {!isSubscribed && (
+          <div className="bg-gradient-to-r from-pink-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+            <h3 className="text-xl font-semibold mb-2">Upgrade to Premium</h3>
+            <p className="mb-4">Get unlimited makeup generations and access to all features!</p>
+            <button 
+              onClick={() => setShowUpgradeModal(true)}
+              className="bg-white text-pink-600 px-6 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+            >
+              Upgrade Now - 20$ per month
+            </button>
+          </div>
+        )}
+
+        {/* Premium User Section */}
+        {isSubscribed && (
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg shadow-lg p-6 text-white">
+            <h3 className="text-xl font-semibold mb-2">🎉 Premium User</h3>
+            <p className="mb-4">You have unlimited access to all features! Enjoy unlimited makeup generations.</p>
+            <div className="flex items-center space-x-2">
+              <span className="px-3 py-1 bg-white text-green-600 rounded-full text-sm font-medium">
+                Unlimited Credits
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Upgrade Modal */}

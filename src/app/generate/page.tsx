@@ -1,6 +1,6 @@
   'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ImageUpload from '@/components/ImageUpload';
 import MakeupStyleSelector from '@/components/MakeupStyleSelector';
 import { makeupStyles, MakeupStyle } from '@/lib/replicate';
@@ -19,7 +19,25 @@ export default function GeneratePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+  const [hasCredits, setHasCredits] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
+  // Check user credits on component mount
+  useEffect(() => {
+    const checkCredits = async () => {
+      try {
+        const response = await fetch('/api/user/credits');
+        const data = await response.json();
+        if (response.ok) {
+          setHasCredits(data.hasCredits);
+          setIsSubscribed(data.isSubscribed);
+        }
+      } catch (error) {
+        console.error('Failed to check credits:', error);
+      }
+    };
+    checkCredits();
+  }, []);
 
   const handleImageSelect = (file: File, previewUrl: string) => {
     setSelectedImage(file);
@@ -35,6 +53,13 @@ export default function GeneratePage() {
   const handleGenerate = async () => {
     if (!selectedImage || !selectedStyle) {
       setError('Please select an image and makeup style');
+      return;
+    }
+
+    // Check if user has credits before generating
+    if (!hasCredits && !isSubscribed) {
+      setError('You have no credits remaining. Please upgrade to premium for unlimited generations.');
+      setShowUpgradeModal(true);
       return;
     }
 
@@ -58,6 +83,7 @@ export default function GeneratePage() {
 
       if (!response.ok) {
         if (response.status === 402 && data.needsUpgrade) {
+          setError(data.error || 'You have no credits remaining. Please upgrade to premium for unlimited generations.');
           setShowUpgradeModal(true);
           return;
         }
@@ -66,6 +92,11 @@ export default function GeneratePage() {
 
       setGeneratedImage(data.generatedImageUrl);
       setMakeupBreakdown(data.makeupBreakdown);
+
+      // Update credit status after successful generation
+      if (!data.isSubscribed) {
+        setHasCredits(data.creditsRemaining > 0);
+      }
 
     } catch (err) {
       console.error('Generation error:', err);
@@ -157,12 +188,19 @@ export default function GeneratePage() {
 
             {/* Generate Button */}
             <div className="bg-white rounded-lg shadow-lg p-6">
+              {!hasCredits && !isSubscribed && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">
+                    You have no credits remaining. Please upgrade to premium for unlimited generations.
+                  </p>
+                </div>
+              )}
               <button
                 onClick={handleGenerate}
-                disabled={!selectedImage || !selectedStyle || isGenerating}
+                disabled={!selectedImage || !selectedStyle || isGenerating || (!hasCredits && !isSubscribed)}
                 className={`
                   w-full py-3 px-6 rounded-lg font-medium text-white transition-colors
-                  ${!selectedImage || !selectedStyle || isGenerating
+                  ${!selectedImage || !selectedStyle || isGenerating || (!hasCredits && !isSubscribed)
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'
                   }
@@ -177,6 +215,9 @@ export default function GeneratePage() {
                   'Generate Makeup Look'
                 )}
               </button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                {isSubscribed ? 'Unlimited generations with premium' : 'This will use 1 credit from your account'}
+              </p>
             </div>
           </div>
 

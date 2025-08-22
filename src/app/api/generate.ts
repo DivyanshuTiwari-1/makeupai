@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     if (!creditStatus.hasCredits) {
       return NextResponse.json({ 
-        error: 'No credits remaining. Please upgrade to premium for unlimited generations.',
+        error: 'You have no credits remaining. Please upgrade to premium for unlimited generations or wait for your credits to refresh.',
         needsUpgrade: true
       }, { status: 402 });
     }
