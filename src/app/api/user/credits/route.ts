@@ -3,11 +3,25 @@ import { checkUserCredits } from '@/lib/credits';
 
 export async function GET(request: NextRequest) {
   try {
+    // Debug: Log all headers to see what's being received
+    console.log('🔍 API Route - All headers received:');
+    request.headers.forEach((value, key) => {
+      console.log(`  ${key}: ${value}`);
+    });
+    
     // Get user from middleware headers
     const userId = request.headers.get('x-user-id');
+    console.log('🔍 API Route - x-user-id header value:', userId);
   
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized user is found' }, { status: 401 });
+      console.log('❌ API Route - No x-user-id header found, returning 401');
+      return NextResponse.json({ 
+        error: 'Unauthorized user is found',
+        debug: {
+          receivedHeaders: Object.fromEntries(request.headers.entries()),
+          missingHeader: 'x-user-id'
+        }
+      }, { status: 401 });
     }
 
     // Get cookies for Supabase client
