@@ -1,4 +1,4 @@
-/*import { createServerClient } from '@supabase/ssr';
+wert/*import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
@@ -78,7 +78,7 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|.*\\.|public/).*)',
   ],
 };*/
-import { NextResponse } from 'next/server'
+/*import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(req: NextRequest) {
@@ -89,4 +89,19 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/api/:path*', '/dashboard', '/generate', '/history'],
 }
+*/
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export function middleware(req: NextRequest) {
+  console.log('🔥 MIDDLEWARE RUNNING:', req.nextUrl.pathname)
+  return NextResponse.next()
+}
+
+// Run on everything for testing
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+}
+
+
 
