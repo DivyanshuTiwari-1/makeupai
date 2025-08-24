@@ -3,15 +3,20 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
-  console.log('🔥 MIDDLEWARE IS RUNNING ON:', url.pathname);
-  
+
+  // Always add a debug header so you can check in response headers
+  const response = NextResponse.next();
+  response.headers.set('x-middleware-check', 'true');
+  response.headers.set('x-middleware-path', url.pathname);
+
   // Skip middleware for static files
   if (
     url.pathname.startsWith('/_next') ||
     url.pathname.startsWith('/api/auth') ||
     url.pathname.includes('.')
   ) {
-    return NextResponse.next();
+    response.headers.set('x-middleware-skip', 'static-or-auth');
+    return response;
   }
 
   // Define public routes
@@ -19,26 +24,11 @@ export async function middleware(request: NextRequest) {
   const isPublicPath = publicPaths.includes(url.pathname);
 
   if (isPublicPath) {
-    console.log('📖 Public route, skipping auth');
-    return NextResponse.next();
-  }
-
-  // TEMPORARY: Allow all routes for debugging
-  // Remove this section once authentication is working
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🚧 DEBUG MODE: Allowing all routes');
-    const response = NextResponse.next();
-    // Add mock headers for testing API routes
-    if (url.pathname.startsWith('/api/')) {
-      response.headers.set('x-user-id', 'debug-user-id');
-      response.headers.set('x-user-email', 'debug@example.com');
-      console.log('🔗 Added debug headers for API route');
-    }
+    response.headers.set('x-middleware-skip', 'public');
     return response;
   }
 
   // Create Supabase client
-  const response = NextResponse.next();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -58,13 +48,13 @@ export async function middleware(request: NextRequest) {
 
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
-    
+
     if (error) {
-      console.log('❌ Auth error:', error.message);
+      response.headers.set('x-middleware-auth-error', error.message);
     }
 
     if (!user) {
-      console.log('❌ No user found, redirecting to login');
+      response.headers.set('x-middleware-auth', 'no-user');
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
@@ -72,14 +62,13 @@ export async function middleware(request: NextRequest) {
     if (url.pathname.startsWith('/api/')) {
       response.headers.set('x-user-id', user.id);
       response.headers.set('x-user-email', user.email || '');
-      console.log('🔗 Added user headers for API route');
     }
 
-    console.log('✅ User authenticated:', user.email);
+    response.headers.set('x-middleware-auth', 'ok');
     return response;
 
   } catch (error) {
-    console.error('❌ Middleware error:', error);
+    response.headers.set('x-middleware-exception', 'true');
     return NextResponse.redirect(new URL('/login', request.url));
   }
 }
