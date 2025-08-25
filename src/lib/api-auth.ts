@@ -13,54 +13,44 @@ export interface AuthenticatedUser {
  */
 export async function getAuthenticatedUserId(request: NextRequest): Promise<AuthenticatedUser> {
   try {
-    // Create a new response that we'll use to set cookies if needed
-    const response = new NextResponse();
-    
+    // Create a response to attach new cookies if Supabase refreshes them
+    const response = NextResponse.next();
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value;
+          getAll() {
+            return request.cookies.getAll();
           },
-          set(name: string, value: string, options: any) {
-            response.cookies.set({
-              name,
-              value,
-              ...options,
-            });
-          },
-          remove(name: string, options: any) {
-            response.cookies.set({
-              name,
-              value: '',
-              ...options,
-              maxAge: 0,
+          setAll(cookies) {
+            cookies.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options);
             });
           },
         },
       }
     );
 
-    // First try to get the session
+    // ✅ Get the session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+
     if (sessionError || !session) {
       console.error('No valid session:', sessionError?.message || 'No session found');
       throw NextResponse.json(
-        { error: 'Authentication required', message: 'No valid session found' }, 
+        { error: 'Authentication required', message: 'No valid session found' },
         { status: 401 }
       );
     }
 
-    // Then get the user
+    // ✅ Get the user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       console.error('Auth error:', userError?.message || 'No user found');
       throw NextResponse.json(
-        { error: 'Authentication failed', message: userError?.message || 'No user found' }, 
+        { error: 'Authentication failed', message: userError?.message || 'No user found' },
         { status: 401 }
       );
     }
@@ -86,7 +76,7 @@ export async function getAuthenticatedUserId(request: NextRequest): Promise<Auth
  * Wrapper function to handle authenticated API routes
  * Usage: export const GET = withAuth(async (request, user) => { ... })
  */
-export function withAuth<T extends any[] = []>(
+export function withAuth<T extends unknown[] = unknown[]>(
   handler: (request: NextRequest, user: AuthenticatedUser, ...args: T) => Promise<NextResponse>
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
