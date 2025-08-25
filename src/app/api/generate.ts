@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateMakeupImage, makeupStyles } from '@/lib/replicate';
 import { checkUserCredits, deductCredit } from '@/lib/credits';
-export async function POST(request: NextRequest) {
+import { withAuth } from '@/lib/api-auth';
+
+export const POST = withAuth(async (request: NextRequest, user) => {
   try {
-    // Get user from middleware headers
-    const userId = request.headers.get('x-user-id');
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userId = user.id;
 
     // Parse request body
     const formData = await request.formData();
@@ -31,16 +28,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check user credits
-    const reqCookies = request.cookies;
-    // Adapter to match expected interface
-       const cookies = {
-         getAll: () => Array.from(reqCookies.getAll()).map(({ name, value }) => ({ name, value })),
-         setAll: () => {
-           // Next.js RequestCookies is read-only in API routes, so set is a no-op here
-           // If you need to set cookies in response, do it on the response object
-         },
-       };
-    const creditStatus = await checkUserCredits(userId, cookies);
+    const creditStatus = await checkUserCredits(userId, {
+      getAll: () => request.cookies.getAll().map(({ name, value }) => ({ name, value })),
+      setAll: () => {},
+    });
 
     if (!creditStatus.hasCredits) {
       return NextResponse.json({ 
@@ -51,7 +42,10 @@ export async function POST(request: NextRequest) {
 
     // Deduct credit (for non-subscribed users)
     if (!creditStatus.isSubscribed) {
-      const creditDeducted = await deductCredit(userId, cookies);
+      const creditDeducted = await deductCredit(userId, {
+        getAll: () => request.cookies.getAll().map(({ name, value }) => ({ name, value })),
+        setAll: () => {},
+      });
       if (!creditDeducted) {
         return NextResponse.json({ 
           error: 'Failed to deduct credit. Please try again.',
@@ -91,4 +85,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+});

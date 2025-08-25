@@ -1,27 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerStripe, SUBSCRIPTION_PLANS } from '@/lib/stripe';
 import { createSupabaseServerClientDirect } from '@/lib/supabase';
+import { withAuth } from '@/lib/api-auth';
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user) => {
   try {
-    // Get user from middleware headers
-    const userId = request.headers.get('x-user-id');
-    const userEmail = request.headers.get('x-user-email');
+    const userId = user.id;
+    const userEmail = user.email;
     
-    if (!userId || !userEmail) {
-      console.error('Missing user headers - middleware authentication failed');
-      console.error('Headers received:', {
-        'x-user-id': userId,
-        'x-user-email': userEmail,
-        'user-agent': request.headers.get('user-agent'),
-        'authorization': request.headers.get('authorization')
-      });
-      
-      return NextResponse.json({ 
-        error: 'Unauthorized - User authentication failed. Please ensure you are logged in and Supabase is properly configured.' 
-      }, { status: 401 });
-    }
-
     // Initialize Stripe and Supabase
     let stripe;
     try {
@@ -112,4 +98,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+});

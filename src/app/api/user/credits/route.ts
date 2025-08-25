@@ -1,31 +1,19 @@
+// app/api/user/credits/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api-auth';
 import { checkUserCredits } from '@/lib/credits';
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    // Get user from middleware headers
-    const userId = request.headers.get('x-user-id');
-  
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized user is found' }, { status: 401 });
-    }
-
-    // Get cookies for Supabase client
-    const reqCookies = request.cookies;
-    // Adapter to match expected interface
-    const cookies = {
-      getAll: () => Array.from(reqCookies.getAll()).map(({ name, value }) => ({ name, value })),
-      setAll: () => {
-        // Next.js RequestCookies is read-only in API routes, so set is a no-op here
-        // If you need to set cookies in response, do it on the response object
-      },
-    };
-
-    // Check user credits
-    const creditStatus = await checkUserCredits(userId, cookies);
+    // Check user credits using the authenticated user ID
+    const creditStatus = await checkUserCredits(user.id, {
+      getAll: () => request.cookies.getAll().map(({ name, value }) => ({ name, value })),
+      setAll: () => {},
+    });
 
     return NextResponse.json({
       success: true,
+      userId: user.id,
       credits: creditStatus.credits,
       hasCredits: creditStatus.hasCredits,
       isSubscribed: creditStatus.isSubscribed
@@ -38,4 +26,27 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
+
+// Remove the manual POST handler if not needed
+// If you need a POST handler, you can add it like this:
+/*
+export const POST = withAuth(async (request: NextRequest, user) => {
+  try {
+    const body = await request.json();
+    // Your POST logic here using user.id
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Operation completed',
+      userId: user.id
+    });
+  } catch (error) {
+    console.error('Credits POST error:', error);
+    return NextResponse.json(
+      { error: 'Failed to process request' },
+      { status: 500 }
+    );
+  }
+});
+*/
